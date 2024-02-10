@@ -1,0 +1,18 @@
+/* Tailwind CSS */
+/* This will ensure the checkbox is not displayed but still functional */
+.hidden {
+    position: absolute;
+
+  }
+  
+  /* Custom styles for the checkbox */
+  input[type="checkbox"]:checked + label span {
+    background-color: #13f107; /* Change this color to your desired color */
+    border-color:  #13f107; /* Change this color to your desired color */
+  }
+  
+  /* Hover effect */
+  input[type="checkbox"]:not(:checked) + label:hover span {
+    border-color: #13f107; /* Change this color to your desired color */
+  }
+  
