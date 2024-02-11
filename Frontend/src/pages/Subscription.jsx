@@ -4,23 +4,16 @@ import  axios from 'axios';
 import './sub.css';
 import { Navigate } from "react-router-dom";
 import CloseIcon from '@mui/icons-material/Close';
+import {loadStripe} from '@stripe/stripe-js';
+import Stripe from "./Stripe";
 
 const Subscription = () => {
     
     const [userData, setUserData] = useState(null);
-    const [proPrice,setProPrice] = useState(50);
-    const [elitePrice,setElitePrice] = useState(100);
+    const [addOnPrice,setAddOnPrice] = useState(0);
 
-    const [showCanceledText, setShowCanceledText] = useState(false);
-    const [showCanceledText2, setShowCanceledText2] = useState(false);
-
-    const [eliteCheck, setEliteCheck] = useState(false);
-    const [eliteCheck2, setEliteCheck2] = useState(false);
-    const [eliteCheck3, setEliteCheck3] = useState(false);
-
-    const [showFreePopup, setShowFreePopup] = useState(false);
-    const [showElitePopup, setShowElitePopup] = useState(false);
-    const [showProPopup, setShowProPopup] = useState(false);
+    const [proPrice,setProPrice] = useState(100);
+    const [elitePrice,setElitePrice] = useState(500);
 
     const { user } = useSelector((state) => state.user);
 
@@ -31,122 +24,55 @@ const Subscription = () => {
     }
   }, [user]);
 
+ 
 
-  const handleCheckboxChange = (e) => {
-    setShowCanceledText(e.target.checked);
-    if (e.target.checked) {
-        setProPrice(prevPrice => prevPrice + 10);
-    } else {
-        setProPrice(prevPrice => prevPrice - 10);
-    }
-};
+async function handleCheckout(type,count = 1) {
+    const stripe = await Stripe();
+    console.log(type)
+    const { error } = await stripe.redirectToCheckout({
+      lineItems: [
+        {
+          price: type,
+          quantity: count,
+        },
+      ],
+      mode: 'subscription',
+      successUrl: `http://localhost:5173/profile`,
+      cancelUrl: `http://localhost:3000/profile`,
+      customerEmail: 'customer@email.com',
+    });
+    console.warn(error.message);
+  }
 
-const handleCheckboxChange2 = (e) => {
-    setShowCanceledText2(e.target.checked);
-    if (e.target.checked) {
-        setProPrice(prevPrice => prevPrice + 10);
-    } else {
-        setProPrice(prevPrice => prevPrice - 10);
-    }
-};
 
+    const handleAddons = (e) => {
+            const selectedCount = parseInt(e.target.value);
+            setAddOnPrice(selectedCount);
+            console.log(addOnPrice);
+    };
 
-const handleEliteCheck= (e) => {
-    setEliteCheck(e.target.checked);
-    if (e.target.checked) {
-        setElitePrice(prevPrice => prevPrice + 10);
-    } else {
-        setElitePrice(prevPrice => prevPrice - 10);
-    }
-};
-
-const handleEliteCheck2 = (e) => {
-    setEliteCheck2(e.target.checked);
-    if (e.target.checked) {
-        setElitePrice(prevPrice => prevPrice + 10);
-    } else {
-        setElitePrice(prevPrice => prevPrice - 10);
-    }
-};
-
-const handleEliteCheck3 = (e) => {
-    setEliteCheck3(e.target.checked);
-    if (e.target.checked) {
-        setElitePrice(prevPrice => prevPrice + 10);
-    } else {
-        setElitePrice(prevPrice => prevPrice - 10);
-    }
-};
-
-const ToggleElite = () => {
-    setShowElitePopup(!showElitePopup);
-  };
-
-  const SubscribeElite = async () => {
-    setShowElitePopup(!showElitePopup);
+  const Subscribe = async (plan) => {
     try {
-        const newElitePrice = elitePrice - 100;
-        const newAddons = Math.floor(newElitePrice / 10);
-        console.log(newElitePrice,newAddons)
         const response = await axios.post("http://localhost:3000/api/upgradePlan", {
-          currentPlan: "Elite",
-          addons: newAddons,
+          currentPlan: plan,
+          addons: addOnPrice,
         },
         {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
           });
-    
-        return <Navigate to="/profile" />;
-      } catch (error) {
-        console.error("Error upgrading plan:", error);
-      }
-  };
-
-
-  const TogglePro = () => {
-    setShowProPopup(!showProPopup);
-  };
-
-  const SubscribePro = async () => {
-    setShowProPopup(!showProPopup);
-    try {
-        const newProPrice = proPrice - 50;
-        const newAddons = Math.floor(newProPrice / 10);
-        const response = await axios.post("http://localhost:3000/api/upgradePlan", {
-          currentPlan: "Pro",
-          addons: newAddons,
-        },
-        {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          });
-    
-          return <Navigate to="/profile" />;
-      } catch (error) {
-        console.error("Error upgrading plan:", error);
-      }
-  };
-
-  const ToggleFree = () => {
-    setShowFreePopup(!showFreePopup);
-  };
-
-  const SubscribeFree = async () => {
-    setShowFreePopup(!showFreePopup);
-    try {
-        const response = await axios.post("http://localhost:3000/api/upgradePlan", {
-          currentPlan: "Free",
-          addons: 0,
-        },
-        {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          });
-        
+          if(plan === 'Elite'&& addOnPrice == 0){
+            const Elite = 'price_1OiVwVSCCWTqFklHamJTlQT4';
+            handleCheckout(Elite);
+          }else if(plan === 'Pro' && addOnPrice == 0){
+            const Pro = 'price_1OiKR7SCCWTqFklH3Mt65V3b';
+            console.log(Pro)
+            handleCheckout(Pro);
+          }else if(addOnPrice > 0){
+            const AddonType = 'price_1OiKCxSCCWTqFklHJCDvjkW0';
+            handleCheckout(AddonType,addOnPrice);
+          }
           return <Navigate to="/profile" />;
       } catch (error) {
         console.error("Error upgrading plan:", error);
@@ -163,11 +89,12 @@ const ToggleElite = () => {
                     <h2 class="mb-4 text-4xl tracking-tight font-extrabold text-gray-900 dark:text-white">Designed for business teams like yours</h2>
                 </div>
                     <div class="space-y-8 lg:grid lg:grid-cols-3 sm:gap-6 xl:gap-10 lg:space-y-0">
+                       
                         <div class="flex flex-col p-4 w-[350px] mx-auto max-w-lg text-center text-gray-900 bg-white rounded-lg border border-gray-100 shadow dark:border-gray-600 xl:p-8 dark:bg-gray-800 dark:text-white">
-                            <h3 class="mb-4 text-2xl font-semibold">Starter</h3>
+                            <h3 class="mb-4 text-2xl font-semibold">Free</h3>
                             <p class="font-light text-gray-500 sm:text-lg dark:text-gray-400">Best option for personal use </p>
                             <div class="flex justify-center items-baseline my-8">
-                                <span class="mr-2 text-5xl font-extrabold">$0</span>
+                                <span class="mr-2 text-5xl font-extrabold">0 Rs.</span>
                                 <span class="text-gray-500 dark:text-gray-400">/month</span>
                             </div>
                             <ul role="list" class="mb-8 space-y-4 text-left">
@@ -193,20 +120,21 @@ const ToggleElite = () => {
                                 </li>
                             </ul>
                             {(userData && userData.currentPlan=='Free')?
-                            <button  disabled  onClick={ToggleFree} class=" text-white cursor-not-allowed bg-blue-600 hover:bg-primary-700 focus:ring-4 focus:ring-primary-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:text-white  dark:focus:ring-primary-900">
+                            <button  disabled  onClick={()=>Subscribe('Free')} class=" text-white cursor-not-allowed bg-blue-600 hover:bg-primary-700 focus:ring-4 focus:ring-primary-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:text-white  dark:focus:ring-primary-900">
                             Subscribed
                             </button>:
-                            <button    onClick={ToggleFree} class=" text-white border bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:ring-primary-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:text-white  dark:focus:ring-primary-900">
+                            <button    onClick={()=>Subscribe('Free')} class=" text-white border bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:ring-primary-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:text-white  dark:focus:ring-primary-900">
                             Subscribe
                             </button>
                             }
+
                         </div>
 
                         <div class="flex flex-col p-4 w-[350px] mx-auto max-w-lg text-center text-gray-900 bg-white rounded-lg border border-gray-100 shadow dark:border-gray-600 xl:p-8 dark:bg-gray-800 dark:text-white">
-                            <h3 class="mb-4 text-2xl font-semibold">Starter</h3>
+                            <h3 class="mb-4 text-2xl font-semibold">Pro</h3>
                             <p class="font-light text-gray-500 sm:text-lg dark:text-gray-400">Best option for personal use </p>
                             <div class="flex justify-center items-baseline my-8">
-                                <span class="mr-2 text-5xl font-extrabold">$ {proPrice}</span>
+                                <span class="mr-2 text-5xl font-extrabold"> {proPrice} Rs.</span>
                                 <span class="text-gray-500 dark:text-gray-400">/month</span>
                             </div>
                             <ul role="list" class="mb-8 space-y-4 text-left">
@@ -228,32 +156,44 @@ const ToggleElite = () => {
                                 </li>
                                 
                                 <div className="border border-gray-100"></div>
-
-                                <li className={"flex" + (!showCanceledText ? " line-through" : "") + " items-center space-x-3"}>
-                                    <input type="checkbox" value={showCanceledText} onChange={handleCheckboxChange} />
-                                    <span>Additional admin and location support</span>
-                                </li>
-                                <li className={"flex" + (!showCanceledText2 ? " line-through" : "") + " items-center space-x-3"}>
-                                    <input type="checkbox" value={showCanceledText2} onChange={handleCheckboxChange2} />
-                                    <span>Additional admin and location support</span>
-                                </li>
                             </ul>
                             
                             {(userData && userData.currentPlan=='Pro')?
-                            <button  disabled  onClick={TogglePro} class=" text-white cursor-not-allowed  bg-blue-600 hover:bg-primary-700 focus:ring-4 focus:ring-primary-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:text-white  dark:focus:ring-primary-900">
+                            <button  disabled  onClick={()=>Subscribe('Pro')} class=" text-white cursor-not-allowed bg-blue-600 hover:bg-primary-700 focus:ring-4 focus:ring-primary-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:text-white  dark:focus:ring-primary-900">
                             Subscribed
                             </button>:
-                            <button    onClick={TogglePro} class=" text-white border bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:ring-primary-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:text-white  dark:focus:ring-primary-900">
+                            <button    onClick={()=>Subscribe('Pro')} class=" text-white border bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:ring-primary-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:text-white  dark:focus:ring-primary-900">
                             Subscribe
                             </button>
+                            }
+
+                            {(userData && userData.currentPlan=='Pro')?
+                            <div className="mt-6 flex flex-col items-center">
+                            <h3 class="mb-4 text-2xl font-semibold">Pro AddOns</h3>
+                            <p class="font-light text-gray-500 sm:text-lg dark:text-gray-400 mb-2">10rs per location</p>
+                                <div>
+                                <label htmlFor="location">No. location :</label>
+                                <select className="bg-gray text-black w-16 pl-5  mb-4 ml-2 rounded" onChange={handleAddons} name="location" id="location">
+                                    <option value='0' onChange={handleAddons}>0</option>
+                                    <option value='1' onChange={handleAddons}>1</option>
+                                    <option value='2' onChange={handleAddons}>2</option>
+                                    <option value='3' onChange={handleAddons}>3</option>
+                                </select>
+                                </div>
+                                <button    onClick={()=>Subscribe('Pro')} class="w-64 text-white border bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:ring-primary-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:text-white  dark:focus:ring-primary-900">
+                                    Upgrade
+                                </button>
+                            </div>
+                            :
+                            <></>
                             }
                         </div>
 
                         <div class="flex flex-col p-4 w-[350px] mx-auto max-w-lg text-center text-gray-900 bg-white rounded-lg border border-gray-100 shadow dark:border-gray-600 xl:p-8 dark:bg-gray-800 dark:text-white">
-                            <h3 class="mb-4 text-2xl font-semibold">Starter</h3>
+                            <h3 class="mb-4 text-2xl font-semibold">Elite</h3>
                             <p class="font-light text-gray-500 sm:text-lg dark:text-gray-400">Best option for personal use </p>
                             <div class="flex justify-center items-baseline my-8">
-                                <span class="mr-2 text-5xl font-extrabold">$ {elitePrice}</span>
+                                <span class="mr-2 text-5xl font-extrabold">{elitePrice} Rs.</span>
                                 <span class="text-gray-500 dark:text-gray-400">/month</span>
                             </div>
                             <ul role="list" class="mb-8 space-y-4 text-left">
@@ -276,97 +216,41 @@ const ToggleElite = () => {
                                 
                                 <div className="border border-gray-100"></div>
 
-                                <li className={"flex" + (!eliteCheck ? " line-through" : "") + " items-center space-x-3"}>
-                                    <input type="checkbox" value={eliteCheck} onChange={handleEliteCheck} />
-                                    <span>Additional admin and location support</span>
-                                </li>
-                                <li className={"flex" + (!eliteCheck2 ? " line-through" : "") + " items-center space-x-3"}>
-                                    <input type="checkbox" value={eliteCheck2} onChange={handleEliteCheck2} />
-                                    <span>Additional admin and location support</span>
-                                </li>
-                                <li className={"flex" + (!eliteCheck3 ? " line-through" : "") + " items-center space-x-3"}>
-                                    <input type="checkbox" value={eliteCheck3} onChange={handleEliteCheck3} />
-                                    <span>Additional admin and location support</span>
-                                </li>
                             </ul>
                             
                             {(userData && userData.currentPlan=='Elite')?
-                            <button  disabled  onClick={ToggleElite} class=" text-white cursor-not-allowed  bg-blue-600 hover:bg-primary-700 focus:ring-4 focus:ring-primary-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:text-white  dark:focus:ring-primary-900">
+                            <button  disabled  onClick={()=>Subscribe('Elite')} class=" text-white cursor-not-allowed bg-blue-600 hover:bg-primary-700 focus:ring-4 focus:ring-primary-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:text-white  dark:focus:ring-primary-900">
                             Subscribed
                             </button>:
-                            <button    onClick={ToggleElite} class=" text-white border bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:ring-primary-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:text-white  dark:focus:ring-primary-900">
+                            <button    onClick={()=>Subscribe('Elite')} class=" text-white border bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:ring-primary-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:text-white  dark:focus:ring-primary-900">
                             Subscribe
                             </button>
+                            }
+
+                            {(userData && userData.currentPlan=='Elite')?
+                            <div className="mt-6 flex flex-col items-center">
+                            <h3 class="mb-4 text-2xl font-semibold">Elite AddOns</h3>
+                            <p class="font-light text-gray-500 sm:text-lg dark:text-gray-400 mb-2">10rs per location</p>
+                                <div>
+                                <label htmlFor="location">No. location :</label>
+                                <select className="bg-gray text-black w-16 pl-5  mb-4 ml-2 rounded" onChange={handleAddons} name="location" id="location">
+                                    <option value='0' onChange={handleAddons}>0</option>
+                                    <option value='1' onChange={handleAddons}>1</option>
+                                    <option value='2' onChange={handleAddons}>2</option>
+                                    <option value='3' onChange={handleAddons}>3</option>
+                                </select>
+                                </div>
+                                <button    onClick={()=>Subscribe('Elite')} class="w-64 text-white border bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:ring-primary-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:text-white  dark:focus:ring-primary-900">
+                                    Upgrade
+                                </button>
+                            </div>
+                            :
+                            <></>
                             }
                         </div>
                     </div>
                 </div>
-                {showElitePopup && (
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-8 shadow-lg rounded-lg">
-                    <div className="flex justify-between">
-                     <h2 className="text-xl font-bold mb-4">Payment Details</h2>
-                     <button onClick={()=>setShowElitePopup(!showElitePopup)}><CloseIcon/></button>
-                    </div>
-                    <p className="mb-4">Enter your payment information here.</p>
-                    <div className="text-[24px] font-bold">{elitePrice} $</div>
-                    <hr/>
-                    <div className="flex gap-3 mt-8">
-                        <input type="text" className="bg-gray-300 border-b-500 border-black p-2" placeholder="Full Name"/>
-                        <input type="text" className="bg-gray-300 border-b-500 border-black p-2" placeholder="Account Number"/>
-                    </div>
-                    <div className="flex gap-3 mt-5">
-                        <input type="text" className="bg-gray-300 border-b-500 border-black p-2" placeholder="EXP. Date"/>
-                        <input type="text" className="bg-gray-300 border-b-500 border-black p-2" placeholder="CVV"/>
-                    </div>
-                    <button
-                        className="bg-blue-500 text-white py-2 px-4 rounded mt-8"
-                        onClick={SubscribeElite}
-                    >
-                        Close
-                    </button>
-                    </div>
-                )}
-                {showProPopup && (
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-8 shadow-lg rounded-lg ">
-                    <div className="flex justify-between">
-                     <h2 className="text-xl font-bold mb-4">Payment Details</h2>
-                     <button onClick={()=>setShowProPopup(!showProPopup)}><CloseIcon/></button>
-                    </div>
-                    <p className="mb-4">Enter your payment information here.</p>
-                    <div className="text-[24px] font-bold">{proPrice} $</div>
-                    <hr/>
-                    <div className="flex gap-3 mt-8">
-                        <input type="text" className="bg-gray-300 border-b-500 border-black p-2" placeholder="Full Name"/>
-                        <input type="text" className="bg-gray-300 border-b-500 border-black p-2" placeholder="Account Number"/>
-                    </div>
-                    <div className="flex gap-3 mt-5">
-                        <input type="text" className="bg-gray-300 border-b-500 border-black p-2" placeholder="EXP. Date"/>
-                        <input type="text" className="bg-gray-300 border-b-500 border-black p-2" placeholder="CVV"/>
-                    </div>
-                    <button
-                        className="bg-blue-500 text-white py-2 px-4 rounded mt-8"
-                        onClick={SubscribePro}
-                    >
-                        Close
-                    </button>
-                    </div>
-                )}
-                {showFreePopup && (
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-8 shadow-lg rounded-lg min-w-[400px]">
-                    <div className="flex justify-between">
-                     <h2 className="text-xl font-bold mb-4">Payment Details</h2>
-                     <button onClick={()=>setShowFreePopup(!showFreePopup)}><CloseIcon/></button>
-                    </div>
-                    <p className="mb-4">Click Subscribe to avail.</p>
-                    
-                    <button
-                        className="bg-blue-500 text-white py-2 px-4 rounded mt-8"
-                        onClick={SubscribeFree}
-                    >
-                        Subscribe
-                    </button>
-                    </div>
-                )}
+                
             </section>
             
         </section>

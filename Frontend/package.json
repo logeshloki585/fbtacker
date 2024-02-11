@@ -15,6 +15,7 @@
     "@mui/icons-material": "^5.15.9",
     "@mui/material": "^5.15.9",
     "@reduxjs/toolkit": "^2.0.1",
+    "@stripe/stripe-js": "^2.4.0",
     "antd": "^5.13.2",
     "axios": "^1.6.5",
     "moment": "^2.30.1",

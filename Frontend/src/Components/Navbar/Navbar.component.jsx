@@ -1,6 +1,5 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import logo from "../../assets/Medai-logo.svg";
 import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../../redux/userSlice";
 
